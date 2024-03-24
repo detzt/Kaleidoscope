@@ -60,6 +60,9 @@
 // Support for an LED mode that lets one configure per-layer color maps
 #include "Kaleidoscope-Colormap.h"
 
+// Support for setting a different LED effect for each layer
+#include "Kaleidoscope-LED-EffectPerLayer.h"
+
 // Support for turning the LEDs off after a certain amount of time
 #include "Kaleidoscope-IdleLEDs.h"
 
@@ -592,6 +595,10 @@ KALEIDOSCOPE_INIT_PLUGINS(
   // with a custom LED effect
   NumPad,
 
+  // The LED Effect Per Layer plugin allows you to set a different LED effect
+  // for each layer
+  LEDEffectPerLayer,
+
   // The HostPowerManagement plugin allows us to turn LEDs off when then host
   // goes to sleep, and resume them when it wakes up.
   HostPowerManagement,
@@ -657,6 +664,10 @@ void setup() {
   // maps for. To make things simple, we set it to eight layers, which is how
   // many editable layers we have (see above).
   ColormapEffect.max_layers(8);
+
+  // We set the Colormap effect to be used on all layers except the primary one.
+  LEDEffectPerLayer.setStaticLEDMode(14);
+  LEDEffectPerLayer.enable();
 
   // For Dynamic Macros, we need to reserve storage space for the editable
   // macros. A kilobyte is a reasonable default.
