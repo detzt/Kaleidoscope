@@ -19,7 +19,6 @@
 
 #include <stdint.h> // for uint8_t
 
-#include "kaleidoscope/KeyAddr.h"                 // for KeyAddr
 #include "kaleidoscope/event_handler_result.h"    // for EventHandlerResult
 #include "kaleidoscope/plugin/LEDControl.h"       // for LEDControl
 #include "kaleidoscope/plugin/LEDModeInterface.h" // for LEDModeInterface
@@ -29,21 +28,31 @@ namespace plugin {
 
 class LEDEffectPerLayer : public kaleidoscope::Plugin {
 public:
+  // The value that signifies that the LED mode on a layer is unset.
+  static const int8_t kUnsetLEDMode = -1;
+
   LEDEffectPerLayer();
   void enable();
   void disable();
   bool active();
-  void setDefaultLayer(uint8_t layer);
-  void setStaticLEDMode(LEDModeInterface &static_led_mode);
-  void setStaticLEDMode(uint8_t static_led_mode_index);
+  void setLEDMode(uint8_t layer, int8_t led_mode_index);
+  void setLEDMode(uint8_t layer, LEDModeInterface &led_mode);
+  void setLEDModeForAllLayers(int8_t led_mode_index);
+  void setLEDModeForAllLayers(LEDModeInterface &led_mode);
 
   EventHandlerResult onLayerChange();
 
 private:
-  uint8_t default_layer_;
+  // The configured LED mode for each layer.
+  int8_t layer_led_mode_indices_[MAX_ACTIVE_LAYERS];
+  // The LED mode index on unset layers.
   uint8_t last_active_led_mode_index_;
-  uint8_t static_led_mode_index_;
+  // The previously active layer.
+  uint8_t last_active_layer_;
+  // The plugin status.
   bool enabled_ = false;
+
+  uint8_t getIndexOfLEDMode(LEDModeInterface &led_mode);
 };
 
 } // namespace plugin

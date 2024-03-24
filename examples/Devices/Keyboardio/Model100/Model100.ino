@@ -666,7 +666,8 @@ void setup() {
   ColormapEffect.max_layers(8);
 
   // We set the Colormap effect to be used on all layers except the primary one.
-  LEDEffectPerLayer.setStaticLEDMode(14);
+  LEDEffectPerLayer.setLEDModeForAllLayers(ColormapEffect);
+  LEDEffectPerLayer.setLEDMode(PRIMARY, LEDEffectPerLayer.kUnsetLEDMode);
   LEDEffectPerLayer.enable();
 
   // For Dynamic Macros, we need to reserve storage space for the editable

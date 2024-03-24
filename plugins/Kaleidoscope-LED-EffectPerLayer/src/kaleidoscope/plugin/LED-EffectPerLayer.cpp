@@ -30,6 +30,9 @@ namespace plugin {
 LEDEffectPerLayer::LEDEffectPerLayer() {
   // Respect the configured default LED mode
   last_active_led_mode_index_ = ::LEDControl.get_mode_index();
+
+  // initialize all layers to "unset"
+  setLEDModeForAllLayers(kUnsetLEDMode);
 }
 
 // Basic plugin status functions.
@@ -45,21 +48,29 @@ bool LEDEffectPerLayer::active() { return enabled_; }
 
 // Plugin configuration.
 
-void LEDEffectPerLayer::setDefaultLayer(uint8_t layer) {
-  default_layer_ = layer;
+// Sets the LED mode for the given layer.
+void LEDEffectPerLayer::setLEDMode(uint8_t layer, int8_t led_mode_index) {
+  if (layer >= MAX_ACTIVE_LAYERS) {
+    return;
+  }
+  layer_led_mode_indices_[layer] = led_mode_index;
 }
 
-void LEDEffectPerLayer::setStaticLEDMode(
-    LEDModeInterface &static_led_mode) {
-  // This is a hack, because the API doesn't offer a way to find the index for
-  // a given LEDMode
-  static_led_mode.activate();
-  static_led_mode_index_ = ::LEDControl.get_mode_index();
-  ::LEDControl.set_mode(last_active_led_mode_index_);
+// Sets the LED mode for the given layer.
+void LEDEffectPerLayer::setLEDMode(uint8_t layer, LEDModeInterface &led_mode) {
+  setLEDMode(layer, getIndexOfLEDMode(led_mode));
 }
 
-void LEDEffectPerLayer::setStaticLEDMode(uint8_t static_led_mode_index) {
-  static_led_mode_index_ = static_led_mode_index;
+// Sets the LED mode for all layers.
+void LEDEffectPerLayer::setLEDModeForAllLayers(int8_t led_mode_index) {
+  for (uint8_t i = 0; i < MAX_ACTIVE_LAYERS; i++) {
+    layer_led_mode_indices_[i] = led_mode_index;
+  }
+}
+
+// Sets the LED mode for all layers.
+void LEDEffectPerLayer::setLEDModeForAllLayers(LEDModeInterface &led_mode) {
+  setLEDModeForAllLayers(getIndexOfLEDMode(led_mode));
 }
 
 // Event handlers.
@@ -69,20 +80,44 @@ EventHandlerResult LEDEffectPerLayer::onLayerChange() {
     return EventHandlerResult::OK;
   }
 
-  if (Layer.mostRecent() == default_layer_) {
-    // If on base layer, switch back to previously saved LED mode.
-    ::LEDControl.set_mode(last_active_led_mode_index_);
+  // Collect information.
+  uint8_t current_layer = Layer.mostRecent();
+  int8_t previous_effect = layer_led_mode_indices_[last_active_layer_];
+  int8_t current_effect = layer_led_mode_indices_[current_layer];
+  last_active_layer_ = current_layer;
+
+  // If nothing changed, return.
+  if (previous_effect == current_effect) {
     return EventHandlerResult::OK;
-  } else {
-    // On all other layers,
-    // first save the LED mode that was active if it's not the static led mode
-    if (::LEDControl.get_mode_index() != static_led_mode_index_) {
-      last_active_led_mode_index_ = ::LEDControl.get_mode_index();
-    }
-    // then switch to the Colormap effect.
-    ::LEDControl.set_mode(static_led_mode_index_);
   }
+
+  // If coming from an unset layer, save the current LED mode.
+  if (previous_effect == kUnsetLEDMode) {
+    last_active_led_mode_index_ = ::LEDControl.get_mode_index();
+  }
+
+  // If the new layer is unset, switch back to the saved LED mode.
+  if (current_effect == kUnsetLEDMode) {
+    ::LEDControl.set_mode(last_active_led_mode_index_);
+  } else {
+    // Otherwise, switch to the configured LED mode for the new layer.
+    ::LEDControl.set_mode(current_effect);
+  }
+
   return EventHandlerResult::OK;
+}
+
+// Private helper functions.
+
+// Returns the index of the given LED mode.
+uint8_t LEDEffectPerLayer::getIndexOfLEDMode(LEDModeInterface &led_mode) {
+  // This is a hack, because the API doesn't offer a way to find the index for
+  // a given LEDMode
+  uint8_t current_index = ::LEDControl.get_mode_index();
+  led_mode.activate();
+  uint8_t index = ::LEDControl.get_mode_index();
+  ::LEDControl.set_mode(current_index);
+  return index;
 }
 
 } // namespace plugin
